@@ -90,7 +90,7 @@ end
 d1 = matvecmulti_spec(10000)
 d2 = matvecmulti_gen(10000)
 
-#for i = 1:100 @printf("%lf | %lf\n", d1[i], d2[i]) end
+for i = 1:100 @printf("%lf | %lf\n", d1[i], d2[i]) end
 
 function rel_error(n::Int64)
 
