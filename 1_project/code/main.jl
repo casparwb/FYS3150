@@ -164,7 +164,10 @@ function rel_error(n::Int64)
 end
 
 function plot_error(n=1:8, savefigs=false)
-
+    """
+    A function for plotting the maximum relative error between the general
+    algorithm and the analytical solution to the differential equation.
+    """
 
     err = zeros(length(n)) # array for storing error values
 
@@ -215,42 +218,5 @@ function compare_LU(n::Int64)
 
     @printf("Julia LU factorization time with %d grid points:  %lf ms\n", n, t*1000)
     @printf("\n")
-
-end
-
-function plot_difference()
-    """
-       A function for visualizing the difference in the approximated
-       values from the general and special algorithm
-    """
-
-    n = 1:6
-    avg_diff = zeros(Float64, length(n))
-    for i in n
-        v_gen = general_solver(10^i)[1]
-        v_spec = special_solver(10^i)[1]
-        avg_diff[i] = sum(v_gen .- v_spec)
-        avg_diff[i] /= length(avg_diff[i])
-    end
-    plot(n, avg_diff)
-    savefig("difference.png")
-end
-
-function main(n::Int64, savefigs=false)
-
-
-    # make a subplot with n = 10, 100 and 1000
-    pl1 = plotting(10)
-    pl2 = plotting(100)
-    pl3 = plotting(1000)
-    plot(pl1, pl2, pl3, layout=(3, 1))
-    if savefigs savefig("compare_general.png") end
-
-
-    CPU_time(n)
-
-    # only perform the LU factorization for n <= 1000
-    if n <= 10^3 compare_LU(n) end
-
 
 end
