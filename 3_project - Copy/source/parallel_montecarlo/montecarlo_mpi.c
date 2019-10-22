@@ -90,10 +90,9 @@ int main(int argc, char *argv[]){
   MPI_Comm_size (MPI_COMM_WORLD, &num_procs);
 
   N = atoi(argv[1]);
-
-  int m = 100;              // number of experiments
-  n_MC = ceil(N/num_procs); // number of iterations per worker
-  double *x = (double*)malloc(6*sizeof(double)); // array for storing random numbers
+  int m = 100;
+  n_MC = ceil(N/num_procs);
+  double *x = (double*)malloc(N*sizeof(double));
 
   if (my_rank == 0) {
     filename = argv[2];
@@ -128,6 +127,11 @@ int main(int argc, char *argv[]){
       tot_sum /= (double)num_procs;
 
       double error = fabs(tot_sum - exact)/tot_sum;
+
+      // printf("log10 N = %.0lf\n", log10(N));
+      // printf("Total time: %lf\n", t_tot);
+      // printf("log10 error: %lf\n", log10(error));
+      // printf("Standard dev.: %lf\n", stddev);
 
 
       fprintf(f, "%lf | %lf | %lf | %lf\n", log10(N), t_tot, log10(error), stddev);

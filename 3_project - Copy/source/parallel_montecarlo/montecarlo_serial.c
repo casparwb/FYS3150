@@ -85,14 +85,14 @@ int main(int argc, char *argv[]){
   double exact = 5.*pi*pi/(16*16);
   double error;
 
-  int N = atoi(argv[1]); // number of iterations
-  int m = 100;           // number of experiment
+  int N = atoi(argv[1]);
+  int m = 100;
 
   char *filename = argv[2];
   FILE *f = fopen(filename, "w");
   fprintf(f, "log10 N | Total Time | log10 error | standard dev.\n");
 
-  double *x = (double*)malloc(6*sizeof(double)); // array for storing randm numbers
+  double *x = (double*)malloc(N*sizeof(double));
 
   // perform m experiments
   for (int j = 0; j < m; j++){
@@ -102,6 +102,10 @@ int main(int argc, char *argv[]){
     t_tot = clock() - t;
 
     error = fabs(tot_sum - exact)/tot_sum;
+    // printf("log10 N = %.0lf\n", log10(N));
+    // printf("Total time: %lf s\n", t/(double)CLOCKS_PER_SEC);
+    // printf("log error: %lf \n", log10(error));
+    // printf("Standard dev.: %lf\n", stddev);
 
 
     fprintf(f, "%lf | %lf | %lf | %lf\n", log10(N), t_tot/(double)CLOCKS_PER_SEC, log10(error), stddev);
