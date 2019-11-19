@@ -4,16 +4,27 @@ using Plots, JLD
 
 
 function parallel(N)
+    """
+    Parallel implementation of phase transition study
 
+    N: number of Monte Carlo cycles
+
+    - saves resulting expectation values for each temperature, for each lattice size
+      in a JLD files
+    - also saves the times taken
+    """
+
+    # broadcast necessary data to all workers
     @everywhere begin
         Temps = collect(2.0:0.05:2.3) # temperature range to study
-        ntemps = length(Temps)
-        Ls = [40, 60, 80, 100] # lattice sizes
+        Ls = [40, 60, 80, 100]        # lattice sizes
+
         expecvals = SharedArray{Float64}((length(Temps), length(Ls), 4))
         times = SharedArray{Float64}((length(Temps), length(Ls)))
+        ntemps = length(Temps)
     end
 
-
+    # begin parallelized (distributed) temperature loop
     @sync @distributed for i = 1:ntemps
         for j = 1:4
             avgs, times[i, j] = @timed montecarlo(Temps[i], N, Ls[j])
@@ -21,12 +32,13 @@ function parallel(N)
         end
     end
 
-
+    # extract
     E = expecvals[:,:,1]
     Cv = expecvals[:,:,2]
     χ = expecvals[:,:,3]
-    Mabs = expecvals[:,:,4]
+    Mabs = expecvals[:,:,5]
 
+    """ plot result and save figure """
     p1 = plot(legend=false); p2 = plot(legend=:topright); p3 = plot(legend=false); p4 = plot(legend=false)
     p = [p1, p2, p3, p4]
     labels = ["E", "Cv", "Chi", "Mabs"]
@@ -47,11 +59,11 @@ function parallel(N)
     savefig("figures/part_f.png")
 
 
+    # extract results and save
     expecvalss = sdata(expecvals)
     timess = sdata(times)
 
     save("data/part_e.jld", "expecvals", expecvalss, "times", timess)
-
 
 end
 

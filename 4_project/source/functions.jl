@@ -1,13 +1,20 @@
 using Random, StaticArrays
 
 function analytical(T::Real, ssave=false)
-    """ Calculates the analytical solution to the quantites
-    - Z
-    - ⟨E⟩, ⟨E^2⟩, σE, Cv
-    - ⟨|M|⟩, ⟨|M^2|⟩, σM, χ
+    """ Calculates the analytical expectation values
+        for the mean energy, magnetization, and the heat capacity
+        and magnetic susceptibility for a 2x2 spin lattice at temperature T
 
-    for 2x2 spin lattice at temperature T
+    Input:
+    ----------------
+    - T: temperature [kT/J]
+
+    Output:
+    ------------------
+    - array with [⟨E⟩, Cv, ⟨M⟩, χ, ⟨|M|⟩] per particle (spin)
+
     """
+
 
     β = 1.0/T
 
@@ -17,30 +24,26 @@ function analytical(T::Real, ssave=false)
 
     Z = 2*exp(8*β) + 12 + 2*exp(-8*β) # partition function
 
-    """ mean energy, mean squared energy, standard deviation of energy """
+    """ mean energy, mean squared energy, heat capacity """
     Emean = 1.0/Z*(-16*exp(8*β) + 16*exp(-8*β))
     E2mean = 1.0/Z*(128*exp(8*β) + 128*exp(-8*β))
 
 
-    Evar = (E2mean - Emean^2)/(4*T^2) # heat capacity
+    Cv = (E2mean - Emean^2)/(4*T^2) # heat capacity
 
-    """ mean magnetization, mean squared magnetization, std. deviation of magnetization """
+    """ mean magnetization, mean squared magnetization, magnetic susceptibility """
     Mmean = 0
-    # M2mean = 32/Z*(exp(8*β) + 1)
-    # Mabsmean = 32/Z*(exp(8*β) + 1)
-
     M2mean = (8*(1 + exp(8*β)))/(3 + cosh(8*β))
     Mabsmean = (2*(2 + exp(8β)))/(3 + cosh(8*β))
 
-    Mvar = (M2mean - Mabsmean^2)/(4*T) # magnetic susceptibility
+    χ = (M2mean - Mabsmean^2)/(4*T) # magnetic susceptibility
 
     """ per particle """
-
     Emean /= 4
     Mmean /= 4
     Mabsmean /= 4
 
-    expecvalues = [Emean, Evar, Mmean, Mvar, Mabsmean]
+    expecvalues = [Emean, Cv, Mmean, χ, Mabsmean]
 
     if ssave
         savepath = string(datapath, "analytical_T=$(Float64(T))", ".jld")
@@ -51,7 +54,8 @@ function analytical(T::Real, ssave=false)
 end
 
 function energy(lattice::Array, L::Real)
-    """ Computes the energy in the current configuration """
+    """ Computes the energy in the current configuration
+    """
 
     E = 0.0
     L = Int16(L)
@@ -76,6 +80,7 @@ function create_ghost_points(array)
     left = vcat(0, left, 0)
     right = vcat(0, right, 0)
 
+    # contruct new lattice
     lattice = vcat(bottom, array, top)
     lattice = hcat(right, lattice, left)
 
@@ -83,11 +88,21 @@ function create_ghost_points(array)
 end
 
 function init(L::Real, T::Float64, ordered=false)
-    """ Initialize energy, spin lattice, and magnetization """
+    """ Initialize energy, spin lattice, and magnetization
+    Input:
+    -----------
+    L: number of spins in each dimension
+    T: temperature
+    ordered: true/false- whether to initialize with all spins = 1
+
+    Output:
+    -----------------
+    - spin lattice with ghost points of size (L+2)x(L+2)
+    - initial energy
+    - initial magnetization
+    """
 
     """ Spin lattice """
-    Random.seed!(2212)
-
     spins = zeros(Int8, L, L)
     if ordered
         fill!(spins, 1)
@@ -104,8 +119,6 @@ function init(L::Real, T::Float64, ordered=false)
 
     """ Magnetization """
     M = sum(spins)
-
-
 
     return lattice, E, M
 end
@@ -169,7 +182,8 @@ function montecarlo(T, N, L, ordered=false)
 
     """
     Perform N Monte Carlo simulations with Metropolis sampling
-    Input
+
+    Input:
     -------
     T:       temperature
     N:       number of cycles
@@ -199,13 +213,14 @@ function montecarlo(T, N, L, ordered=false)
 
     xy = collect(2:L+1) # lattice indices
 
-    """ Perform N Monte Carlo simulations """
+    """ Begin N Monte Carlo simulations """
     @inbounds for iters = 1:N
         """ randomly shuffle for each iteration such
             that we go over all spins but in random order """
         x = shuffle(xy)
         y = shuffle(xy)
 
+        """ loop over over spins and flip spin """
         @inbounds for (ix, iy) in zip(x, y)
             ΔE = 2*lattice[iy, ix]*(lattice[iy, ix+1] +
                                   lattice[iy, ix-1] +
@@ -224,7 +239,8 @@ function montecarlo(T, N, L, ordered=false)
                     # if iters > Int64(1e4)
                     #     push!(Pe, E)
                     # end
-
+                else
+                    continue
                 end # end inner if
 
             else """ accept if ΔE <= 0"""

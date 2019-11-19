@@ -11,7 +11,7 @@ function most_likely_state()
     T1 = 1.0
     T2 = 2.4
 
-    cycles = collect(500:50:50000) # array with no. of MC cycles with step of 20
+    cycles = collect(500:50:50000) # array with no. of MC cycles with step of 50
 
     # arrays for storing results
     expecs_ord = zeros(length(cycles), 2)
@@ -23,9 +23,12 @@ function most_likely_state()
 
         println("Starting T=$Temp")
         for i = 1:length(cycles)
+
+            """ Ordered initial state """
             avgs_ord, accepts[Ti, i, 1] = montecarlo(Temp, cycles[i], L, true) # true for ordered initial state
             expecs_ord[i,:] = compute_quants(avgs_ord, [Temp, cycles[i], L])[1:3:4]
 
+            """ Random initial state """
             avgs_unord, accepts[Ti, i, 2] = montecarlo(Temp, cycles[i], L, false) # false for unordered
             expecs_unord[i,:] = compute_quants(avgs_unord, [Temp, cycles[i], L])[1:3:4]
 
@@ -66,15 +69,13 @@ function most_likely_state()
     plot(p1, p2, link=:y, xlabel="MC cycles", ylabel="No. of accepted configs.")
     savefig("figures/counts_new.png")
 
-
-
 end
 
 
 function prob_dist(N)
 
     """
-    Plot the probability distribution
+    Compute and plot the probability distribution
     for the energy for T=1.0 and T=2.4
     """
     T1 = 1.0
@@ -105,12 +106,14 @@ end
 
 
 function main()
-    """ Main program """
+    """ Main program which call all the above functions and performs the analysis """
 
     """ Comparing analytical values for T=1.0 """
     N = [10^i for i = 2:2:8]
-    analytical(1.0, true)
+
+    # analytical(1.0, true)
     analyticals = load("data/analytical_T=1.0.jld", "expecvalues") # [Emean, Evar, Mmean, Mvar, Mabs]
+
     for i in 1:length(N)
         avgs = montecarlo(1.0, N[i], 2)[1]
         expecs = compute_quants(avgs, [1.0, N[i], 2])
@@ -140,6 +143,7 @@ function main()
     times_serial = load("data/serial_times_new.jld", "times")
     times_parallel = load("data/part_e.jld", "times")
 
+    # time for the 40 and 60-sized lattices
     times_4060_serial = sum(times_serial, dims=1)
     times_4060_parallel = [maximum(times_parallel[1:4,i]) for i = 1:2]
     times_4060_parallel += [maximum(times_parallel[5:end,i]) for i = 1:2]
@@ -153,11 +157,13 @@ function main()
                 | Speedup: $(round(time_s/time_p))")
     end
 
+    # times for all lattice sizes in the parallel implementation
     times_parallell = [maximum(times_parallel[1:4,i]) for i = 1:4]
     times_parallell += [maximum(times_parallel[5:end,i]) for i = 1:4]
     println("$times_parallell")
 
     """ studying phase transitions """
+
     expecvals = load("data/part_e.jld", "expecvals")
     """
     - shape (7, 4, 4)
@@ -170,9 +176,9 @@ function main()
     Cvs = [expecvals[:,i,2] for i = 1:4]
     Chis = [expecvals[:,i,3] for i = 1:4]
 
-    np = pyimport("numpy")
+    np = pyimport("numpy") # neat, right??
 
-    Temps_new = collect(2.0:0.001:2.3)
+    Temps_new = collect(2.0:0.001:2.3) # for fitting new data
 
     """ fit Cv and χ to a polynomial for each L """
     Cvs_new = []
@@ -187,20 +193,23 @@ function main()
         push!(Cvs_new, new_Cv)
         push!(Chis_new, new_Chi)
     end
+
     scatter(Temps, Cvs[1], label="Computed Values", dpi=500, legend=:bottomright)
     plot!(Temps_new, Cvs_new[1], label="Fitted values")
     xlabel!("T [kT/J]"); ylabel!("Specific Heat Capacity")
     title!("Fitted Cv values with 4th deg. polynomial")
     savefig("figures/fitted.png")
 
-
+    # extract critical temperatures
     Tcrits_Cv = [Temps_new[argmax(Cvs_new[i])] for i = 1:4]
     Tcrits_Chi = [Temps_new[argmax(Chis_new[i])] for i = 1:4]
     Tcrits = [np.mean([Tcv, Tchi]) for (Tcv, Tchi) in zip(Tcrits_Cv, Tcrits_Chi)]
 
+    # array with L^-1
     Ls_inv = 1.0 ./ Ls
     Ls_inv_new = collect(0:0.001:Ls_inv[1])
 
+    # fit polynomials and print intercept
     poly_Cv = np.polyfit(Ls_inv, Tcrits_Cv, deg=1)
     poly_Chi = np.polyfit(Ls_inv, Tcrits_Chi, deg=1)
     intercept_Cv = poly_Cv[end]
@@ -208,6 +217,7 @@ function main()
     println(intercept_Cv)
     println(intercept_Chi)
 
+    # plot critical temperatures as function of L^-1
     Tcrits_new_Cv = np.polyval(poly_Cv, Ls_inv_new)
     Tcrits_new_Chi = np.polyval(poly_Chi, Ls_inv_new)
 
