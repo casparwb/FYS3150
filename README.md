@@ -12,7 +12,7 @@
 ### Project 4
  A numerical study of the phase transitions of the 2-dimensional Ising model using Monte Carlo methods with Metropolis-Hastings sampling.
 
-###Project 5
+### Project 5
  A Monte Carlo approach to the simulation of the spread of an infectious disease using the SIRS model.
 
 All projects written in the Julia programming language, with the exception of some code written in C for the sake of parallelization.
